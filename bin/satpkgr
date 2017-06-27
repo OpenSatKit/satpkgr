@@ -28,6 +28,18 @@ flag [:f,:flagname]
 
 desc 'Describe install here'
 arg_name 'Describe arguments to install here'
+command :init do |c|
+
+  c.action do |global_options,options,args|
+
+
+    @pkgr.initPackage(options, args)
+
+  end
+end
+
+desc 'Describe install here'
+arg_name 'Describe arguments to install here'
 command :install do |c|
   c.desc 'Describe a switch to install'
   c.switch :s
@@ -37,12 +49,12 @@ command :install do |c|
   c.flag :f
   c.action do |global_options,options,args|
 
-    # Your command logic here
-     
-    # If you have any errors, just raise them
-    # raise "that command made no sense"
+    unless args.size() == 0
+      args.each do | package |
+        @pkgr.installPackage(options, package)
+      end
+    end
 
-    puts "install command ran"
   end
 end
 
@@ -61,7 +73,7 @@ pre do |global,command,options,args|
   # Use skips_pre before a command to skip this block
   # on that command only
 
-  SatPkgr::SatPkgr.new(Dir.pwd)
+  @pkgr = SatPkgr::SatPkgr.new(Dir.pwd)
 
   true
 end
