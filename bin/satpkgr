@@ -1,65 +1,66 @@
 #!/usr/bin/env ruby
 require 'gli'
-begin # XXX: Remove this begin/rescue before distributing your app
 require 'satpkgr'
-rescue LoadError
-  STDERR.puts "In development, you need to use `bundle exec bin/satpkgr` to run your app"
-  STDERR.puts "At install-time, RubyGems will make sure lib, etc. are in the load path"
-  STDERR.puts "Feel free to remove this message from bin/satpkgr now"
-  exit 64
-end
 
 include GLI::App
 
-program_desc 'Describe your application here'
+program_desc 'Manage OpenSatKit applications'
 
 version Satpkgr::VERSION
 
 subcommand_option_handling :normal
 arguments :strict
 
-desc 'Describe some switch here'
-switch [:s,:switch]
+# desc 'Describe some switch here'
+# switch [:s,:switch]
 
-desc 'Describe some flag here'
-default_value 'the default'
-arg_name 'The name of the argument'
-flag [:f,:flagname]
+# desc 'Describe some flag here'
+# default_value 'the default'
+# arg_name 'The name of the argument'
+# flag [:f,:flagname]
 
-desc 'Describe install here'
-arg_name 'Describe arguments to install here'
+desc 'Initializes a new satpkgr project'
+arg_name ''
+skips_pre
 command :init do |c|
 
   c.action do |global_options,options,args|
 
-
-    @pkgr.initPackage(options, args)
+    SatPkgr::SatPkgr.initPackage(Dir.pwd)
 
   end
 end
 
-desc 'Describe install here'
-arg_name 'Describe arguments to install here'
+desc 'Installs an application from a github repository'
+arg_name '<username/repository>'
 command :install do |c|
-  c.desc 'Describe a switch to install'
-  c.switch :s
+  # c.desc 'Describe a switch to install'
+  # c.switch :s
 
-  c.desc 'Describe a flag to install'
-  c.default_value 'default'
-  c.flag :f
+  # c.desc 'Describe a flag to install'
+  # c.default_value 'default'
+  # c.flag :f
   c.action do |global_options,options,args|
+
+
 
     unless args.size() == 0
       args.each do | package |
-        @pkgr.installPackage(options, package)
+        package_address_split = package.split('/')
+        unless package_address_split.size == 2
+          help_now! "Bad package address: '#{package}'"
+        end
+        @pkgr.installPackage(package_address_split[0], package_address_split[1])
       end
+    else
+      help_now!("Specify an application to download.")
     end
 
   end
 end
 
-desc 'Describe uninstall here'
-arg_name 'Describe arguments to uninstall here'
+desc 'Unininstall an applicatoin'
+arg_name '<username/repository>'
 command :uninstall do |c|
   c.action do |global_options,options,args|
     puts "uninstall command ran"
@@ -67,27 +68,19 @@ command :uninstall do |c|
 end
 
 pre do |global,command,options,args|
-  # Pre logic here
-  # Return true to proceed; false to abort and not call the
-  # chosen command
-  # Use skips_pre before a command to skip this block
-  # on that command only
 
   @pkgr = SatPkgr::SatPkgr.new(Dir.pwd)
 
   true
+
 end
 
-post do |global,command,options,args|
-  # Post logic here
-  # Use skips_post before a command to skip this
-  # block on that command only
-end
-
-on_error do |exception|
-  # Error logic here
-  # return false to skip default error handling
-  true
-end
+# post do |global,command,options,args|
+# end
+# on_error do |exception|
+#   # Error logic here
+#   # return false to skip default error handling
+#   true
+# end
 
 exit run(ARGV)
