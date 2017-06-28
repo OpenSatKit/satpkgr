@@ -44,7 +44,7 @@ command :install do |c|
 
 
 
-    unless args.size() == 0
+    if args.size() != 0
       args.each do | package |
         package_address_split = package.split('/')
         unless package_address_split.size == 2
@@ -53,7 +53,7 @@ command :install do |c|
         @pkgr.installPackage(package_address_split[0], package_address_split[1])
       end
     else
-      help_now!("Specify an application to download.")
+      @pkgr.installAllPackages
     end
 
   end

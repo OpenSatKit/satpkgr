@@ -44,6 +44,24 @@ module SatPkgr
 			end
 		end
 
+		def installAllPackages
+			packages = @conf_hash['dependencies'].keys
+
+			if packages.size == 0
+				raise "No packages are listed in #{@conf_file}"
+			else
+				packages.each do |package|
+					puts "Installing package '#{package}'"
+					package_address_split = package.split('/')
+	        unless package_address_split.size == 2
+	          raise "Bad package address: '#{package}'"
+	        end
+	        installPackage(package_address_split[0], package_address_split[1])
+	        puts "Success!"
+				end
+			end
+
+		end
 
 		def installPackage(username, repository)
 
@@ -65,6 +83,9 @@ module SatPkgr
 					open(zipfile_name, 'wb') do |zipfile|
 						zipfile.write(uri.read)
 					end
+
+					@conf_hash['dependencies']["#{username}/#{repository}"] = 'master'
+					saveConf
 
 				end
 			rescue OpenURI::HTTPError => error
@@ -96,8 +117,20 @@ module SatPkgr
 			File.open(@@cosmos_launcher_config_location, 'a') do |file|
 				file.write ("\nTOOL \"#{repository}\" \"LAUNCH #{cosmos_launcher_location}\"")
 			end
+
 		end
 
+		def uninstallPackage(username, repository)
+
+
+
+		end
+
+		def saveConf
+			File.open(@conf_file,"w") do |f|
+			  f.write(JSON.pretty_generate(@conf_hash))
+			end
+		end
 
 	end
 end
