@@ -17,4 +17,6 @@ spec = Gem::Specification.new do |s|
   s.add_runtime_dependency('gli','2.16.0')
   s.add_runtime_dependency('rubyzip','1.2.1')
 
+  s.add_development_dependency "rspec"
+
 end
