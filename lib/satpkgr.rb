@@ -35,7 +35,6 @@ module SatPkgr
 			  "cfs" => {
 			  },
 			  "dependencies" => {
-			    "johannkm/OpenSatKit-example" => "0.0.1"
 			  }
 			}
 
@@ -123,15 +122,47 @@ module SatPkgr
 		def uninstallPackage(username, repository)
 
 			package_name = "#{username}/#{repository}"
+			package_name_file = File.join(username,repository)
 			local_address = File.join(@pkg_dir, username, "#{repository}-master")
 
-			puts "Removing #{package_name} from #{local_address}"
+			if @conf_hash['dependencies'].has_key?(package_name)
 
-			if File.directory?(local_address)
-				FileUtils::remove_entry_secure(local_address)
-				puts "Success"
+				@conf_hash['dependencies'].delete(package_name)
+				saveConf
+
+				found_in_launcher = false
+
+				temp_launcher = "#{@@cosmos_launcher_config_location}_temp"
+				File.open(temp_launcher, 'w') do |out_file|
+					File.foreach(@@cosmos_launcher_config_location) do |line|
+						line.chomp!
+						unless line.include?(package_name_file)
+							out_file.puts(line)
+						else
+							puts "Removing #{line}"
+							found_in_launcher = true
+
+						end
+					end
+				end
+
+				File.rename(temp_launcher, @@cosmos_launcher_config_location)
+
+				unless found_in_launcher
+					raise "#{package_name_file} not found in #{@@cosmos_launcher_config_location}"
+				end
+
+				puts "Removing #{package_name} from #{local_address}"
+
+				if File.directory?(local_address)
+					FileUtils::remove_entry_secure(local_address)
+
+				else
+					raise "#{local_address} is not a directory."
+				end
+
 			else
-				raise "#{local_address} is not a directory."
+				raise "#{package_name} is not installed"
 			end
 
 		end
