@@ -122,8 +122,22 @@ module SatPkgr
 
 		def uninstallPackage(username, repository)
 
+			package_name = "#{username}/#{repository}"
+			local_address = File.join(@pkg_dir, username, "#{repository}-master")
 
+			puts "Removing #{package_name} from #{local_address}"
 
+			if File.directory?(local_address)
+				FileUtils::remove_entry_secure(local_address)
+				puts "Success"
+			else
+				raise "#{local_address} is not a directory."
+			end
+
+		end
+
+		def removePackageDirectory
+			FileUtils::remove_entry_secure(@@pkg_dir_name)
 		end
 
 		def saveConf
