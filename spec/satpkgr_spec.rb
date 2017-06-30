@@ -86,6 +86,7 @@ describe SatPkgr do
 
 						expect{pkgr.installPackage('OpenSatKit','OpenSatKit-example')}.to_not raise_error
 						expect(Dir).to exist(File.join('sat_modules','OpenSatKit', 'OpenSatKit-example-master'))
+						expect(JSON.load(File.new('satpkgr.json'))['dependencies']).to have_key('OpenSatKit/OpenSatKit-example')
 					end
 				end
 			end
@@ -121,20 +122,23 @@ describe SatPkgr do
 		describe "#uninstallPackage" do
 
 			context "given a currently installed package" do
-				it "deletes it" do
+				it "deletes the package" do
 					tmpdir do
+						conf_file = File.join('config','tools','launcher','launcher.txt')
 						FileUtils.mkdir_p(File.join('sat_modules','example_user','example_app-master'))
 						File.open('satpkgr.json','w') do |file|
 							file.write('{"dependencies": {"example_user/example_app":"master"}}')
 						end
 						pkgr = SatPkgr::SatPkgr.new('.')
 						FileUtils.mkdir_p(File.join('config','tools','launcher'))
-						File.open(File.join('config','tools','launcher','launcher.txt'),'w') do |file|
+						File.open(conf_file,'w') do |file|
 							file.write('TOOL "example_app" "LAUNCH ../sat_modules/example_user/example_app-master/cosmos/launcher.rb')
 						end
 
 						expect{pkgr.uninstallPackage('example_user','example_app')}.to_not raise_error
 						expect(Dir).to_not exist(File.join('sat_modules','example_user','example_app-master'))
+						expect(File.read(conf_file)).to_not include('example_app')
+						expect(JSON.load(File.new('satpkgr.json'))['dependencies']).to_not have_key('example_user/example_app')
 					end
 				end
 			end
