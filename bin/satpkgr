@@ -72,7 +72,7 @@ end
 
 pre do |global,command,options,args|
 
-  @pkgr = SatPkgr::SatPkgr.new(Dir.pwd)
+  @pkgr = SatPkgr::SatPkgrController.new(Dir.pwd)
 
   true
 

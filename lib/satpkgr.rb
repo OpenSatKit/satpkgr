@@ -1,11 +1,14 @@
+# @title SatPkgr
+# @author Johann Miller
+
 require 'satpkgr/version.rb'
 
 module SatPkgr
 
-	class SatPkgr
-			@@conf_file_name = 'satpkgr.json'
-			@@pkg_dir_name = 'sat_modules'
-			@@cosmos_launcher_config_location = File.join('config','tools','launcher','launcher.txt')
+	class SatPkgrController
+		@@conf_file_name = 'satpkgr.json'
+		@@pkg_dir_name = 'sat_modules'
+		@@cosmos_launcher_config_location = File.join('config','tools','launcher','launcher.txt')
 
 		def initialize(main_dir)
 

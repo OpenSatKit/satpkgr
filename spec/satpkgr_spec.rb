@@ -6,9 +6,9 @@ describe SatPkgr do
 
 		context "given a directory with a config file" do
 			it "creates a new instance" do
-				tmpdir do 	
+				tmpdir do
 					File.open('satpkgr.json','w')
-					expect{SatPkgr::SatPkgr.new('.')}.to_not raise_error
+					expect{SatPkgr::SatPkgrController.new('.')}.to_not raise_error
 				end
 			end
 		end
@@ -16,7 +16,7 @@ describe SatPkgr do
 		context "given a directory without a config file" do
 			it "fails" do
 				tmpdir do
-					expect{SatPkgr::SatPkgr.new('.')}.to raise_error(RuntimeError, /File does not exist/)
+					expect{SatPkgr::SatPkgrController.new('.')}.to raise_error(RuntimeError, /File does not exist/)
 				end
 			end
 		end
@@ -27,7 +27,7 @@ describe SatPkgr do
 				it "writes a json config file in the directory" do
 					tmpdir do
 						Dir.mkdir('temp')
-						SatPkgr::SatPkgr.initPackage('temp')
+						SatPkgr::SatPkgrController.initPackage('temp')
 						json_file = File.join('temp','satpkgr.json')
 						conf = nil
 
@@ -48,7 +48,7 @@ describe SatPkgr do
 						File.open('satpkgr.json','w') do |file|
 							file.write('{"dependencies": {}}')
 						end
-						pkgr = SatPkgr::SatPkgr.new('.')
+						pkgr = SatPkgr::SatPkgrController.new('.')
 
 						expect{pkgr.installAllPackages}.to raise_error(RuntimeError, /No packages are listed/)
 					end
@@ -61,7 +61,7 @@ describe SatPkgr do
 						File.open('satpkgr.json','w') do |file|
 							file.write('{"dependencies": {"user1/app1":"master","user2/app2":"master"}}')
 						end
-						pkgr = SatPkgr::SatPkgr.new('.')
+						pkgr = SatPkgr::SatPkgrController.new('.')
 
 						expect(pkgr).to receive(:installPackage).with("user1","app1").once
 						expect(pkgr).to receive(:installPackage).with("user2","app2").once
@@ -82,7 +82,7 @@ describe SatPkgr do
 						File.open('satpkgr.json','w') do |file|
 							file.write('{"dependencies": {}}')
 						end
-						pkgr = SatPkgr::SatPkgr.new('.')
+						pkgr = SatPkgr::SatPkgrController.new('.')
 
 						expect{pkgr.installPackage('OpenSatKit','OpenSatKit-example')}.to_not raise_error
 						expect(Dir).to exist(File.join('sat_modules','OpenSatKit', 'OpenSatKit-example-master'))
@@ -97,7 +97,7 @@ describe SatPkgr do
 						File.open('satpkgr.json','w') do |file|
 							file.write('{"dependencies": {}}')
 						end
-						pkgr = SatPkgr::SatPkgr.new('.')
+						pkgr = SatPkgr::SatPkgrController.new('.')
 
 						expect{pkgr.installPackage('null','null')}.to raise_error(RuntimeError, /404/)
 					end
@@ -110,7 +110,7 @@ describe SatPkgr do
 						File.open('satpkgr.json','w') do |file|
 							file.write('{"dependencies": {}}')
 						end
-						pkgr = SatPkgr::SatPkgr.new('.')
+						pkgr = SatPkgr::SatPkgrController.new('.')
 
 						expect{pkgr.installPackage('OpenSatKit','satpkgr')}.to raise_error(/No such file or directory/)
 					end
@@ -129,7 +129,7 @@ describe SatPkgr do
 						File.open('satpkgr.json','w') do |file|
 							file.write('{"dependencies": {"example_user/example_app":"master"}}')
 						end
-						pkgr = SatPkgr::SatPkgr.new('.')
+						pkgr = SatPkgr::SatPkgrController.new('.')
 						FileUtils.mkdir_p(File.join('config','tools','launcher'))
 						File.open(conf_file,'w') do |file|
 							file.write('TOOL "example_app" "LAUNCH ../sat_modules/example_user/example_app-master/cosmos/launcher.rb')
@@ -153,7 +153,7 @@ describe SatPkgr do
 						Dir.mkdir('sat_modules')
 						File.open(File.join('sat_modules','temp.txt'),'w')
 						File.open('satpkgr.json','w')
-						pkgr = SatPkgr::SatPkgr.new('.')
+						pkgr = SatPkgr::SatPkgrController.new('.')
 
 						expect(Dir).to exist('sat_modules')
 						pkgr.removePackageDirectory
@@ -166,7 +166,7 @@ describe SatPkgr do
 				it "fails" do
 					tmpdir do
 						File.open('satpkgr.json','w')
-						pkgr = SatPkgr::SatPkgr.new('.')
+						pkgr = SatPkgr::SatPkgrController.new('.')
 
 						expect{pkgr.removePackageDirectory}.to raise_error(/No such file or directory/)
 					end
