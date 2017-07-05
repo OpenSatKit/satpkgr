@@ -13,12 +13,11 @@ arguments :strict
 
 desc 'Initializes a new satpkgr project'
 arg_name ''
-skips_pre
 command :init do |c|
 
   c.action do |global_options,options,args|
 
-    SatPkgr::SatPkgrController.initPackage(Dir.pwd)
+    @runner.init(global_options,options,args)
 
   end
 end
@@ -29,6 +28,51 @@ command :install do |c|
 
   c.action do |global_options,options,args|
 
+    @runner.install(global_options,options,args)
+
+  end
+end
+
+desc 'Uninstalls an application'
+arg_name '<username/repository>'
+command :uninstall do |c|
+  c.action do |global_options,options,args|
+    
+  	@runner.uninstall(global_options,options,args)
+
+  end
+end
+
+desc 'Removes all installed packages'
+arg_name ''
+command :clean do |c|
+  c.action do |global_options,options,args|
+    
+  	@runner.clean(global_options,options,args)
+
+  end
+end
+
+pre do |global,command,options,args|
+
+  @runner = CommandRunner.new(global,command,options,args)
+
+  true
+end
+
+class CommandRunner
+	
+  def initialize(global,command,options,args)
+  	unless command == 'init'
+    	@pkgr = SatPkgr::SatPkgrController.new(Dir.pwd)
+    end
+  end
+
+  def init(global_options,options,args)
+    SatPkgr::SatPkgrController.initPackage(Dir.pwd)
+  end
+
+  def install(global_options,options,args)
     if args.size() != 0
       args.each do | package |
         package_address_split = package.split('/')
@@ -40,15 +84,10 @@ command :install do |c|
     else
       @pkgr.installAllPackages
     end
-
   end
-end
 
-desc 'Uninstalls an application'
-arg_name '<username/repository>'
-command :uninstall do |c|
-  c.action do |global_options,options,args|
-    if args.size() != 0
+  def uninstall(global_options,options,args)
+  	if args.size() != 0
       args.each do | package |
         package_address_split = package.split('/')
         unless package_address_split.size == 2
@@ -60,21 +99,10 @@ command :uninstall do |c|
       raise "No package specified"
     end
   end
-end
 
-desc 'Removes all installed packages'
-arg_name ''
-command :clean do |c|
-  c.action do |global_options,options,args|
-    @pkgr.removePackageDirectory
+  def clean(global_options,options,args)
+  	@pkgr.removePackageDirectory
   end
-end
-
-pre do |global,command,options,args|
-
-  @pkgr = SatPkgr::SatPkgrController.new(Dir.pwd)
-
-  true
 
 end
 
