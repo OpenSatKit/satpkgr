@@ -15,7 +15,9 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency('gli', '2.16.0')
   s.add_runtime_dependency('rubyzip', '1.2.1')
 
+  s.add_development_dependency 'rake'
   s.add_development_dependency 'rspec'
   s.add_development_dependency 'rubocop'
   s.add_development_dependency 'rubocop-rspec'
+  s.add_development_dependency 'guard-rspec'
 end
