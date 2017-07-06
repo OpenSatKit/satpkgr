@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 require 'gli'
-require_relative File.join('..','lib','satpkgr')
+require_relative File.join('..', 'lib', 'satpkgr')
 
 include GLI::App
 
@@ -13,97 +13,82 @@ arguments :strict
 
 desc 'Initializes a new satpkgr project'
 arg_name ''
+skips_pre
 command :init do |c|
-
-  c.action do |global_options,options,args|
-
-    @runner.init(global_options,options,args)
-
+  c.action do |global_options, options, args|
+    CommandRunner.init(global_options, options, args)
   end
 end
 
 desc 'Installs an application from a github repository'
 arg_name '<username/repository>'
 command :install do |c|
-
-  c.action do |global_options,options,args|
-
-    @runner.install(global_options,options,args)
-
+  c.action do |global_options, options, args|
+    @runner.install(global_options, options, args)
   end
 end
 
 desc 'Uninstalls an application'
 arg_name '<username/repository>'
 command :uninstall do |c|
-  c.action do |global_options,options,args|
-    
-  	@runner.uninstall(global_options,options,args)
-
+  c.action do |global_options, options, args|
+    @runner.uninstall(global_options, options, args)
   end
 end
 
 desc 'Removes all installed packages'
 arg_name ''
 command :clean do |c|
-  c.action do |global_options,options,args|
-    
-  	@runner.clean(global_options,options,args)
-
+  c.action do |global_options, options, args|
+    @runner.clean(global_options, options, args)
   end
 end
 
-pre do |global,command,options,args|
-
-  @runner = CommandRunner.new(global,command,options,args)
-
+pre do |global, command, options, args|
+  @runner = CommandRunner.new(global, command, options, args)
   true
 end
 
 class CommandRunner
-	
-  def initialize(global,command,options,args)
-  	unless command == 'init'
-    	@pkgr = SatPkgr::SatPkgrController.new(Dir.pwd)
-    end
+  def initialize(_global, command, _options, _args)
+    @pkgr = SatPkgr::SatPkgrController.new(Dir.pwd)
   end
 
-  def init(global_options,options,args)
-    SatPkgr::SatPkgrController.initPackage(Dir.pwd)
+  def self.init(_global_options, _options, _args)
+    SatPkgr::SatPkgrController.init_package(Dir.pwd)
   end
 
-  def install(global_options,options,args)
-    if args.size() != 0
-      args.each do | package |
+  def install(_global_options, _options, args)
+    if !args.empty?
+      args.each do |package|
         package_address_split = package.split('/')
         unless package_address_split.size == 2
           help_now! "Bad package address: '#{package}'"
         end
-        @pkgr.installPackage(package_address_split[0], package_address_split[1])
+        @pkgr.install_package(package_address_split[0], package_address_split[1])
       end
     else
-      @pkgr.installAllPackages
+      @pkgr.install_all_packages
     end
   end
 
-  def uninstall(global_options,options,args)
-  	if args.size() != 0
-      args.each do | package |
+  def uninstall(_global_options, _options, args)
+    if !args.empty?
+      args.each do |package|
         package_address_split = package.split('/')
         unless package_address_split.size == 2
           help_now! "Bad package address: '#{package}'"
         end
-        @pkgr.uninstallPackage(package_address_split[0], package_address_split[1])
+        @pkgr.uninstall_package(package_address_split[0], package_address_split[1])
       end
     else
-      raise "No package specified"
+      raise 'No package specified'
     end
   end
 
-  def clean(global_options,options,args)
-  	@pkgr.removePackageDirectory
+  def clean(_global_options, _options, _args)
+    @pkgr.remove_package_directory
   end
-
 end
 
 exit run(ARGV)
