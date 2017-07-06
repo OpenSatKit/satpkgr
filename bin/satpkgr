@@ -50,7 +50,7 @@ pre do |global, command, options, args|
 end
 
 class CommandRunner
-  def initialize(_global, command, _options, _args)
+  def initialize(_global, _command, _options, _args)
     @pkgr = SatPkgr::SatPkgrController.new(Dir.pwd)
   end
 

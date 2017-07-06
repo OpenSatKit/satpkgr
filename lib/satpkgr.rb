@@ -48,8 +48,8 @@ module SatPkgr
       if pkg_list.empty?
         install_packages_from_config
       else
-        list_packages(pkg_list) do |owner,repo|
-          install_package(owner,repo)
+        list_packages(pkg_list) do |owner, repo|
+          install_package(owner, repo)
         end
       end
     end
@@ -125,8 +125,8 @@ module SatPkgr
       if pkg_list.empty?
         raise 'No package specified'
       else
-        list_packages(pkg_list) do |owner,repo|
-          uninstall_package(owner,repo)
+        list_packages(pkg_list) do |owner, repo|
+          uninstall_package(owner, repo)
         end
       end
     end
@@ -193,10 +193,9 @@ module SatPkgr
         unless package_address_split.size == 2
           raise "Bad package address: #{package}"
         end
-        yield(package_address_split[0],package_address_split[1])
+        yield(package_address_split[0], package_address_split[1])
       end
     end
-
   end
 end
 
