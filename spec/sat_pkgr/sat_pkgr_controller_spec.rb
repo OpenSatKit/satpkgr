@@ -40,7 +40,7 @@ describe SatPkgr::SatPkgrController do
     end
   end
 
-  describe '#install_all_packages' do
+  describe '#install_multiple_packages' do
     context 'given a config file with no dependencies' do
       it 'fails' do
         tmpdir do
@@ -50,7 +50,7 @@ describe SatPkgr::SatPkgrController do
           pkgr = described_class.new('.')
 
           expect do
-            pkgr.install_all_packages
+            pkgr.install_multiple_packages([])
           end .to raise_error(RuntimeError, /No packages are listed/)
         end
       end
@@ -67,7 +67,7 @@ describe SatPkgr::SatPkgrController do
           pkgr = described_class.new('.')
           allow(pkgr).to receive(:install_package)
 
-          pkgr.install_all_packages
+          pkgr.install_multiple_packages([])
           expect(pkgr).to have_received(:install_package)
             .with('user1', 'app1').once
           expect(pkgr).to have_received(:install_package)

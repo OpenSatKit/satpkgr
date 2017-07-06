@@ -59,31 +59,11 @@ class CommandRunner
   end
 
   def install(_global_options, _options, args)
-    if !args.empty?
-      args.each do |package|
-        package_address_split = package.split('/')
-        unless package_address_split.size == 2
-          help_now! "Bad package address: '#{package}'"
-        end
-        @pkgr.install_package(package_address_split[0], package_address_split[1])
-      end
-    else
-      @pkgr.install_all_packages
-    end
+    @pkgr.install_multiple_packages(args)
   end
 
   def uninstall(_global_options, _options, args)
-    if !args.empty?
-      args.each do |package|
-        package_address_split = package.split('/')
-        unless package_address_split.size == 2
-          help_now! "Bad package address: '#{package}'"
-        end
-        @pkgr.uninstall_package(package_address_split[0], package_address_split[1])
-      end
-    else
-      raise 'No package specified'
-    end
+    @pkgr.uninstall_multiple_packages(args)
   end
 
   def clean(_global_options, _options, _args)

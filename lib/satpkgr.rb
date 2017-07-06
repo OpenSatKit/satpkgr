@@ -44,7 +44,17 @@ module SatPkgr
       end
     end
 
-    def install_all_packages
+    def install_multiple_packages(pkg_list)
+      if pkg_list.empty?
+        install_packages_from_config
+      else
+        list_packages(pkg_list) do |owner,repo|
+          install_package(owner,repo)
+        end
+      end
+    end
+
+    def install_packages_from_config
       packages = @conf_hash['dependencies'].keys
 
       if packages.empty?
@@ -111,6 +121,16 @@ module SatPkgr
       end
     end
 
+    def uninstall_multiple_packages(pkg_list)
+      if pkg_list.empty?
+        raise 'No package specified'
+      else
+        list_packages(pkg_list) do |owner,repo|
+          uninstall_package(owner,repo)
+        end
+      end
+    end
+
     def uninstall_package(username, repository)
       package_name = "#{username}/#{repository}"
       package_name_file = File.join(username, repository)
@@ -166,6 +186,17 @@ module SatPkgr
         f.write(JSON.pretty_generate(@conf_hash))
       end
     end
+
+    def list_packages(pkg_arr)
+      pkg_arr.each do |package|
+        package_address_split = package.split('/')
+        unless package_address_split.size == 2
+          raise "Bad package address: #{package}"
+        end
+        yield(package_address_split[0],package_address_split[1])
+      end
+    end
+
   end
 end
 
