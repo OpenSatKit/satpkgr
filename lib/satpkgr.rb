@@ -4,183 +4,199 @@
 require 'satpkgr/version.rb'
 
 module SatPkgr
+  # Controls installation process for packages
+  class SatPkgrController
+    @@conf_file_name = 'satpkgr.json'
+    @@pkg_dir_name = 'sat_modules'
+    @@cosmos_launcher_config_location = File.join('config', 'tools', 'launcher', 'launcher.txt')
 
-	class SatPkgrController
-		@@conf_file_name = 'satpkgr.json'
-		@@pkg_dir_name = 'sat_modules'
-		@@cosmos_launcher_config_location = File.join('config','tools','launcher','launcher.txt')
+    def initialize(main_dir)
+      @main_dir = main_dir
+      @pkg_dir = File.join(main_dir, @@pkg_dir_name)
+      @conf_file = File.join(main_dir, @@conf_file_name)
 
-		def initialize(main_dir)
+      unless File.exist?(@conf_file)
+        raise "File does not exist: #{@conf_file}. Use `satpkgr init`."
+      end
 
-			@main_dir = main_dir
-			@pkg_dir = File.join(main_dir,@@pkg_dir_name)
-			@conf_file = File.join(main_dir,@@conf_file_name)
+      @conf_hash = JSON.load File.new(@conf_file)
+    end
 
-			unless File.exist?(@conf_file)
-				raise "File does not exist: #{@conf_file}. Use `satpkgr init`."
-			end
+    def self.init_package(main_dir)
+      conf_file = File.join(main_dir, @@conf_file_name)
 
-			@conf_hash = JSON.load (File.new(@conf_file))
-		end
+      pkg_conf = {
+        'name' => 'username/package_name',
+        'description' => 'what your package does',
+        'version' => '0.0.1',
+        'author' => 'your name',
+        'cosmos' => {
+          'launcher' => 'your_app_launcher.rb'
+        },
+        'cfs' => {
+        },
+        'dependencies' => {
+        }
+      }
 
-		def self.initPackage(main_dir)
+      File.open(conf_file, 'w') do |f|
+        f.write(JSON.pretty_generate(pkg_conf))
+      end
+    end
 
-			conf_file = File.join(main_dir,@@conf_file_name)
+    def install_multiple_packages(pkg_list)
+      if pkg_list.empty?
+        install_packages_from_config
+      else
+        list_packages(pkg_list) do |owner, repo|
+          install_package(owner, repo)
+        end
+      end
+    end
 
-			pkg_conf = {
-			  "name" => "username/package_name",
-			  "description" => "what your package does",
-			  "version" => "0.0.1",
-			  "author" => "your name",
-			  "cosmos" => {
-			    "launcher" => "your_app_launcher.rb"
-			  },
-			  "cfs" => {
-			  },
-			  "dependencies" => {
-			  }
-			}
+    def install_packages_from_config
+      packages = @conf_hash['dependencies'].keys
 
-			File.open(conf_file,"w") do |f|
-			  f.write(JSON.pretty_generate(pkg_conf))
-			end
-		end
+      if packages.empty?
+        raise "No packages are listed in #{@conf_file}"
+      else
+        packages.each do |package|
+          puts "Installing package '#{package}'"
+          package_address_split = package.split('/')
+          unless package_address_split.size == 2
+            raise "Bad package address: '#{package}'"
+              end
+          install_package(package_address_split[0], package_address_split[1])
+          puts 'Success!'
+        end
+      end
+    end
 
-		def installAllPackages
-			packages = @conf_hash['dependencies'].keys
+    def install_package(username, repository)
+      web_address = "https://github.com/#{username}/#{repository}/archive/master.zip"
+      local_address = File.join(@pkg_dir, username)
+      zipfile_name = File.join(local_address, "#{repository}.zip")
 
-			if packages.size == 0
-				raise "No packages are listed in #{@conf_file}"
-			else
-				packages.each do |package|
-					puts "Installing package '#{package}'"
-					package_address_split = package.split('/')
-	        unless package_address_split.size == 2
-	          raise "Bad package address: '#{package}'"
-	        end
-	        installPackage(package_address_split[0], package_address_split[1])
-	        puts "Success!"
-				end
-			end
+      begin
+        open(web_address) do |uri|
+          Dir.mkdir(@pkg_dir) unless File.directory?(@pkg_dir)
 
-		end
+          unless File.directory?("#{@pkg_dir}/#{username}")
+            Dir.mkdir("#{@pkg_dir}/#{username}")
+          end
 
-		def installPackage(username, repository)
+          open(zipfile_name, 'wb') do |zipfile|
+            zipfile.write(uri.read)
+          end
 
-			web_address = "https://github.com/#{username}/#{repository}/archive/master.zip"
-			local_address = File.join(@pkg_dir, username)
-			zipfile_name = File.join(local_address, "#{repository}.zip")
+          @conf_hash['dependencies']["#{username}/#{repository}"] = 'master'
+          save_conf
+        end
+      rescue OpenURI::HTTPError => error
+        response = error.io
+        raise "#{response.status} on '#{web_address}'"
+      end
 
-			begin
-				open(web_address) do |uri|
+      Zip::File.open(zipfile_name) do |zipfile|
+        zipfile.each do |entry|
+          entry_name = File.join(local_address, entry.name)
 
-					unless File.directory?(@pkg_dir)
-						Dir.mkdir(@pkg_dir)
-					end
+          unless File.exist?(entry_name)
+            FileUtils.mkdir_p(File.dirname(entry_name))
+            zipfile.extract(entry, entry_name)
+          end
+        end
+      end
 
-					unless File.directory?("#{@pkg_dir}/#{username}")
-						Dir.mkdir("#{@pkg_dir}/#{username}")
-					end
+      extracted_name = "#{repository}-master"
+      extracted_address = File.join(local_address, extracted_name)
+      extracted_address_relative = File.join('..', @@pkg_dir_name, username, extracted_name) # cosmos launcher looks in tool directory
 
-					open(zipfile_name, 'wb') do |zipfile|
-						zipfile.write(uri.read)
-					end
+      installed_config = JSON.load File.new(File.join(extracted_address, @@conf_file_name))
+      installed_config_cosmos_launcher = installed_config['cosmos']['launcher']
+      cosmos_launcher_location = File.join(extracted_address_relative, 'cosmos', installed_config_cosmos_launcher)
 
-					@conf_hash['dependencies']["#{username}/#{repository}"] = 'master'
-					saveConf
+      File.open(@@cosmos_launcher_config_location, 'a') do |file|
+        file.write "\nTOOL \"#{repository}\" \"LAUNCH #{cosmos_launcher_location}\""
+      end
+    end
 
-				end
-			rescue OpenURI::HTTPError => error
-				response = error.io
-				raise "#{response.status} on '#{web_address}'"
-			end
+    def uninstall_multiple_packages(pkg_list)
+      if pkg_list.empty?
+        raise 'No package specified'
+      else
+        list_packages(pkg_list) do |owner, repo|
+          uninstall_package(owner, repo)
+        end
+      end
+    end
 
+    def uninstall_package(username, repository)
+      package_name = "#{username}/#{repository}"
+      package_name_file = File.join(username, repository)
+      local_address = File.join(@pkg_dir, username, "#{repository}-master")
 
-			Zip::File.open(zipfile_name) do |zipfile|
-				zipfile.each do |entry|
+      if @conf_hash['dependencies'].key?(package_name)
 
-					entry_name = File.join(local_address, entry.name)
+        @conf_hash['dependencies'].delete(package_name)
+        save_conf
 
-					unless File.exist?(entry_name)
-						FileUtils::mkdir_p(File.dirname(entry_name))
-						zipfile.extract(entry, entry_name)
-					end
-				end
-			end
+        found_in_launcher = false
 
-			extracted_name = "#{repository}-master"
-			extracted_address = File.join(local_address, extracted_name)
-			extracted_address_relative = File.join('..', @@pkg_dir_name, username, extracted_name) # cosmos launcher looks in tool directory
+        temp_launcher = "#{@@cosmos_launcher_config_location}_temp"
+        File.open(temp_launcher, 'w') do |out_file|
+          File.foreach(@@cosmos_launcher_config_location) do |line|
+            line.chomp!
+            if line.include?(package_name_file)
+              puts "Removing #{line}"
+              found_in_launcher = true
 
-			installed_config = JSON.load (File.new( File.join(extracted_address, @@conf_file_name)))
-			installed_config_cosmos_launcher = installed_config['cosmos']['launcher']
-			cosmos_launcher_location = File.join(extracted_address_relative, 'cosmos', installed_config_cosmos_launcher)
+            else
+              out_file.puts(line)
+            end
+          end
+        end
 
-			File.open(@@cosmos_launcher_config_location, 'a') do |file|
-				file.write ("\nTOOL \"#{repository}\" \"LAUNCH #{cosmos_launcher_location}\"")
-			end
+        File.rename(temp_launcher, @@cosmos_launcher_config_location)
 
-		end
+        unless found_in_launcher
+          raise "#{package_name_file} not found in #{@@cosmos_launcher_config_location}"
+        end
 
-		def uninstallPackage(username, repository)
+        puts "Removing #{package_name} from #{local_address}"
 
-			package_name = "#{username}/#{repository}"
-			package_name_file = File.join(username,repository)
-			local_address = File.join(@pkg_dir, username, "#{repository}-master")
+        if File.directory?(local_address)
+          FileUtils.remove_entry_secure(local_address)
 
-			if @conf_hash['dependencies'].has_key?(package_name)
+        else
+          raise "#{local_address} is not a directory."
+        end
 
-				@conf_hash['dependencies'].delete(package_name)
-				saveConf
+      else
+        raise "#{package_name} is not installed"
+      end
+    end
 
-				found_in_launcher = false
+    def remove_package_directory
+      FileUtils.remove_entry_secure(@@pkg_dir_name)
+    end
 
-				temp_launcher = "#{@@cosmos_launcher_config_location}_temp"
-				File.open(temp_launcher, 'w') do |out_file|
-					File.foreach(@@cosmos_launcher_config_location) do |line|
-						line.chomp!
-						unless line.include?(package_name_file)
-							out_file.puts(line)
-						else
-							puts "Removing #{line}"
-							found_in_launcher = true
+    def save_conf
+      File.open(@conf_file, 'w') do |f|
+        f.write(JSON.pretty_generate(@conf_hash))
+      end
+    end
 
-						end
-					end
-				end
-
-				File.rename(temp_launcher, @@cosmos_launcher_config_location)
-
-				unless found_in_launcher
-					raise "#{package_name_file} not found in #{@@cosmos_launcher_config_location}"
-				end
-
-				puts "Removing #{package_name} from #{local_address}"
-
-				if File.directory?(local_address)
-					FileUtils::remove_entry_secure(local_address)
-
-				else
-					raise "#{local_address} is not a directory."
-				end
-
-			else
-				raise "#{package_name} is not installed"
-			end
-
-		end
-
-		def removePackageDirectory
-			FileUtils::remove_entry_secure(@@pkg_dir_name)
-		end
-
-		def saveConf
-			File.open(@conf_file,"w") do |f|
-			  f.write(JSON.pretty_generate(@conf_hash))
-			end
-		end
-
-	end
+    def list_packages(pkg_arr)
+      pkg_arr.each do |package|
+        package_address_split = package.split('/')
+        unless package_address_split.size == 2
+          raise "Bad package address: #{package}"
+        end
+        yield(package_address_split[0], package_address_split[1])
+      end
+    end
+  end
 end
 
 require 'json'
