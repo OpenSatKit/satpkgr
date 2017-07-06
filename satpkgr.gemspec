@@ -4,7 +4,7 @@ Gem::Specification.new do |s|
   s.version = Satpkgr::VERSION
   s.description = 'Install packages for OpenSatKit'
   s.author = 'Johann Miller'
-  s.licenses    = ['MIT']
+  s.licenses = ['MIT']
   s.email = 'johann.k.miller@nasa.gov'
   s.homepage = 'http://johannmiller.com'
   s.platform = Gem::Platform::RUBY
@@ -16,9 +16,9 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency('gli', '2.16.0')
   s.add_runtime_dependency('rubyzip', '1.2.1')
 
-  s.add_development_dependency('rake','~> 12.0')
-  s.add_development_dependency('rspec','~> 3.5')
-  s.add_development_dependency('rubocop','~> 0.49')
-  s.add_development_dependency('rubocop-rspec','~> 1.15')
-  s.add_development_dependency('guard-rspec','~> 4.7')
+  s.add_development_dependency('rake', '~> 12.0')
+  s.add_development_dependency('rspec', '~> 3.5')
+  s.add_development_dependency('rubocop', '~> 0.49')
+  s.add_development_dependency('rubocop-rspec', '~> 1.15')
+  s.add_development_dependency('guard-rspec', '~> 4.7')
 end
