@@ -1,0 +1,12 @@
+require: rubocop-rspec
+
+Style/BlockLength:
+  Exclude:
+    - 'spec/**/*_spec.rb'
+
+RSpec/ExampleLength:
+  Max: 15
+
+RSpec/MultipleExpectations:
+  Max: 5
+
