@@ -5,7 +5,7 @@ describe SatPkgr::SatPkgrController do
   context 'given a directory with a config file' do
     it 'creates a new instance' do
       tmpdir do
-        File.open('satpkgr.json', 'w')
+        create_conf_file
         expect { described_class.new('.') }.not_to raise_error
       end
     end
@@ -25,9 +25,8 @@ describe SatPkgr::SatPkgrController do
     context 'given a directory' do
       it 'writes a json config file in the directory' do
         tmpdir do
-          Dir.mkdir('temp')
-          described_class.init_package('temp')
-          json_file = File.join('temp', 'satpkgr.json')
+          described_class.init_package('.')
+          json_file = 'satpkgr.json'
           conf = nil
 
           expect(File).to exist(json_file)
@@ -44,9 +43,7 @@ describe SatPkgr::SatPkgrController do
     context 'given a config file with no dependencies' do
       it 'fails' do
         tmpdir do
-          File.open('satpkgr.json', 'w') do |file|
-            file.write('{"dependencies": {}}')
-          end
+          create_conf_file('{"dependencies": {}}')
           pkgr = described_class.new('.')
 
           expect do
@@ -59,11 +56,8 @@ describe SatPkgr::SatPkgrController do
     context 'given a config file with several dependencies' do
       it 'calls #install_package for each' do
         tmpdir do
-          conf = '{"dependencies":'\
-          '{"user1/app1":"master","user2/app2":"master"}}'
-          File.open('satpkgr.json', 'w') do |file|
-            file.write(conf)
-          end
+          create_conf_file('{"dependencies":'\
+            '{"user1/app1":"master","user2/app2":"master"}}')
           pkgr = described_class.new('.')
           allow(pkgr).to receive(:install_package)
 
@@ -80,25 +74,22 @@ describe SatPkgr::SatPkgrController do
   describe '#install_package' do
     context 'given a valid repository and cosmos config' do
       it 'downloads the application' do
+        org = 'OpenSatKit'
+        repo = 'OpenSatKit-example'
+        address = "#{org}/#{repo}"
+        code_dir = File.join('sat_modules', org, "#{repo}-master")
+
         tmpdir do
-          org = 'OpenSatKit'
-          repo = 'OpenSatKit-example'
-          address = "#{org}/#{repo}"
-          FileUtils.mkdir_p(File.join('config', 'tools', 'launcher'))
-          launcher = File.join('config', 'tools', 'launcher', 'launcher.txt')
-          code_dir = File.join('sat_modules', org, "#{repo}-master")
-          File.open(launcher, 'w')
-          File.open('satpkgr.json', 'w') do |file|
-            file.write('{"dependencies": {}}')
-          end
+          create_demo_dir(org, repo)
           pkgr = described_class.new('.')
 
           expect do
             pkgr.install_package(org, repo)
           end .not_to raise_error
           expect(Dir).to exist(code_dir)
-          expect(JSON.parse(File.open('satpkgr.json', 'r').read)['dependencies'])
-            .to have_key(address.to_s)
+
+          conf = JSON.parse(File.open('satpkgr.json', 'r').read)['dependencies']
+          expect(conf).to have_key(address.to_s)
         end
       end
     end
@@ -106,12 +97,12 @@ describe SatPkgr::SatPkgrController do
     context "given a repository that doesn't exist" do
       it 'fails' do
         tmpdir do
-          File.open('satpkgr.json', 'w') do |file|
-            file.write('{"dependencies": {}}')
-          end
+          create_conf_file('{"dependencies": {}}')
           pkgr = described_class.new('.')
 
-          expect { pkgr.install_package('null', 'null') }.to raise_error(RuntimeError, /404/)
+          expect do
+            pkgr.install_package('null', 'null')
+          end .to raise_error(RuntimeError, /404/)
         end
       end
     end
@@ -119,9 +110,7 @@ describe SatPkgr::SatPkgrController do
     context "given a repository that isn't a satpkgr application" do
       it 'fails' do
         tmpdir do
-          File.open('satpkgr.json', 'w') do |file|
-            file.write('{"dependencies": {}}')
-          end
+          create_conf_file('{"dependencies": {}}')
           pkgr = described_class.new('.')
 
           expect do
@@ -135,24 +124,46 @@ describe SatPkgr::SatPkgrController do
   describe '#uninstall_package' do
     context 'given a currently installed package' do
       it 'deletes the package' do
-        tmpdir do
-          conf_file = File.join('config', 'tools', 'launcher', 'launcher.txt')
-          FileUtils.mkdir_p(
-            File.join('sat_modules', 'example_user', 'example_app-master')
-          )
-          File.open('satpkgr.json', 'w') do |file|
-            file.write('{"dependencies": {"example_user/example_app":"master"}}')
-          end
-          pkgr = described_class.new('.')
-          FileUtils.mkdir_p(File.join('config', 'tools', 'launcher'))
-          File.open(conf_file, 'w') do |file|
-            file.write('TOOL "example_app" "LAUNCH ../sat_modules/example_user/example_app-master/cosmos/launcher.rb')
-          end
+        org = 'example_user'
+        repo = 'example_app'
+        app_dir = File.join('sat_modules', org, "#{repo}-master")
 
-          expect { pkgr.uninstall_package('example_user', 'example_app') }.not_to raise_error
-          expect(Dir).not_to exist(File.join('sat_modules', 'example_user', 'example_app-master'))
-          expect(File.read(conf_file)).not_to include('example_app')
-          expect(JSON.parse(File.open('satpkgr.json', 'r').read)['dependencies']).not_to have_key('example_user/example_app')
+        tmpdir do
+          create_demo_dir(org, repo)
+          install_dummy_app(org, repo)
+          pkgr = described_class.new('.')
+
+          expect do
+            pkgr.uninstall_package(org, repo)
+          end .not_to raise_error
+          conf = JSON.parse(File.open('satpkgr.json', 'r').read)
+          expect(Dir).not_to exist(app_dir)
+          expect(conf['dependencies'])
+            .not_to have_key("#{org}/#{repo}")
+        end
+      end
+    end
+  end
+
+  describe '#uninstall_package' do
+    context 'given a currently installed package' do
+      it 'deletes the package' do
+        org = 'example_user'
+        repo = 'example_app'
+        app_dir = File.join('sat_modules', org, "#{repo}-master")
+
+        tmpdir do
+          create_demo_dir(org, repo)
+          install_dummy_app(org, repo)
+          pkgr = described_class.new('.')
+
+          expect do
+            pkgr.uninstall_package(org, repo)
+          end .not_to raise_error
+          conf = JSON.parse(File.open('satpkgr.json', 'r').read)
+          expect(Dir).not_to exist(app_dir)
+          expect(conf['dependencies'])
+            .not_to have_key("#{org}/#{repo}")
         end
       end
     end
@@ -164,7 +175,7 @@ describe SatPkgr::SatPkgrController do
         tmpdir do
           Dir.mkdir('sat_modules')
           File.open(File.join('sat_modules', 'temp.txt'), 'w')
-          File.open('satpkgr.json', 'w')
+          create_conf_file
           pkgr = described_class.new('.')
 
           expect(Dir).to exist('sat_modules')
@@ -177,12 +188,42 @@ describe SatPkgr::SatPkgrController do
     context 'given a directory that does not containes sat_modules' do
       it 'fails' do
         tmpdir do
-          File.open('satpkgr.json', 'w')
+          create_conf_file
           pkgr = described_class.new('.')
 
-          expect { pkgr.remove_package_directory }.to raise_error(/No such file or directory/)
+          expect do
+            pkgr.remove_package_directory
+          end .to raise_error(/No such file or directory/)
         end
       end
     end
   end
+end
+
+def create_conf_file(contents = '')
+  ret = nil
+  File.open('satpkgr.json', 'w') do |file|
+    file.write(contents)
+
+    ret = file
+  end
+  ret
+end
+
+def create_demo_dir(org, repo)
+  FileUtils.mkdir_p(File.join('config', 'tools', 'launcher'))
+  launcher = File.join('config', 'tools', 'launcher', 'launcher.txt')
+  launcher_line = "TOOL \"#{repo}\" \"LAUNCH "\
+    "../sat_modules/#{org}/#{repo}-master/cosmos/launcher.rb\""
+  File.open(launcher, 'w') do |file|
+    file.write(launcher_line)
+  end
+  create_conf_file('{"dependencies": {}}')
+end
+
+def install_dummy_app(org, repo)
+  FileUtils.mkdir_p(
+    File.join('sat_modules', org, "#{repo}-master")
+  )
+  create_conf_file("{\"dependencies\": {\"#{org}/#{repo}\":\"master\"}}")
 end

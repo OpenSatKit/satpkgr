@@ -1,6 +1,6 @@
 require: rubocop-rspec
 
-Style/BlockLength:
+Metrics/BlockLength:
   Exclude:
     - 'spec/**/*_spec.rb'
 
